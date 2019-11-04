@@ -18,7 +18,7 @@ In addition, the followings are contained.
 
 ![](./result/Class6_result_0.png)
 
-Blog post: [Qiita]()
+Blog post: [Qiita](https://qiita.com/futakuchi0117/items/95c518254185ec5ea485)
 
 # Faster Score-CAM
 
