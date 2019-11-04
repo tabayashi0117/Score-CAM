@@ -9,7 +9,7 @@ The following methods are compared.
 - Grad-CAM
 - Grad-CAM++
 - Score-CAM
-- Faster-Score-CAM (Original faster version of Score-CAM)
+- Faster-Score-CAM (faster version of Score-CAM)
 
 In addition, the followings are contained.
 
