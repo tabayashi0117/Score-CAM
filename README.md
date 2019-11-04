@@ -18,6 +18,14 @@ In addition, the followings are contained.
 
 ![](./result/Class6_result_0.png)
 
+Blog post: [Qiita]()
+
+# Faster Score-CAM
+
+We thought that several channels were dominant in generating the final heat map. Faster-Score-CAM adds the processing of “use only channels with large variances as mask images” to Score-CAM. (`max_N = -1` is the original Score-CAM). 
+
+When using VGG16, Faster-Score-CAM is about 10 times faster than Score-CAM.
+
 # Requirement
 
 - Python 3.6.8
