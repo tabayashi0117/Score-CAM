@@ -28,8 +28,8 @@ When using VGG16, Faster-Score-CAM is about 10 times faster than Score-CAM.
 
 # Requirement
 
-- Python 3.7.x
-- tensorflow 2.3.1
+- Python >= 3.6
+- tensorflow >= 2.0
 
 # Usage
 
