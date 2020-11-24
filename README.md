@@ -2,7 +2,7 @@
 
 ![](./image/sample_output.png)
 
-An implementation of [Score-CAM](https://arxiv.org/abs/1910.01279) with keras
+An implementation of [Score-CAM](https://arxiv.org/abs/1910.01279) with keras (tf.keras).
 
 The following methods are compared.
 
@@ -28,9 +28,8 @@ When using VGG16, Faster-Score-CAM is about 10 times faster than Score-CAM.
 
 # Requirement
 
-- Python 3.6.8
-- Keras 2.2.4
-- tensorflow 1.14.0
+- Python 3.7.x
+- tensorflow 2.3.1
 
 # Usage
 

@@ -2,9 +2,12 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-from keras.backend import tensorflow_backend
-from keras import backend as K
-from keras.models import Model
+import tensorflow as tf
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import Model
+import gc
+
+tf.compat.v1.disable_eager_execution()
 
 def normalize(x):
         """Utility function to normalize a tensor by its L2 norm"""
@@ -16,7 +19,7 @@ def GradCam(model, img_array, layer_name):
     """GradCAM method for visualizing input saliency."""
     y_c = model.output[0, cls]
     conv_output = model.get_layer(layer_name).output
-    grads = K.gradients(y_c, conv_output)[0]
+    grads = tf.gradients(y_c, conv_output)[0]
     # grads = normalize(grads)
 
     gradient_function = K.function([model.input], [conv_output, grads])
@@ -34,7 +37,7 @@ def GradCamPlusPlus(model, img_array, layer_name):
     cls = np.argmax(model.predict(img_array))
     y_c = model.output[0, cls]
     conv_output = model.get_layer(layer_name).output
-    grads = K.gradients(y_c, conv_output)[0]
+    grads = tf.gradients(y_c, conv_output)[0]
     # grads = normalize(grads)
 
     first = K.exp(y_c)*grads
@@ -77,7 +80,7 @@ def ScoreCam(model, img_array, layer_name, max_N=-1):
         max_N_indices = unsorted_max_indices[np.argsort(-np.array(act_map_std_list)[unsorted_max_indices])]
         act_map_array = act_map_array[:,:,:,max_N_indices]
 
-    input_shape = model.layers[0].output_shape[1:]  # get input shape
+    input_shape = model.layers[0].output_shape[0][1:]  # get input shape
     # 1. upsampled to original input size
     act_map_resized_list = [cv2.resize(act_map_array[0,:,:,k], input_shape[:2], interpolation=cv2.INTER_LINEAR) for k in range(act_map_array.shape[3])]
     # 2. normalize the raw activation value in each activation map into [0, 1]
@@ -124,12 +127,11 @@ def superimpose(original_img_path, cam, emphasize=False):
     
     return superimposed_img_rgb
 
-import keras
-import keras.backend as K
+import tensorflow.keras
 
 import tensorflow as tf
 from tensorflow.python.framework import ops
-from keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.applications.vgg16 import preprocess_input
 
 def build_guided_model(build_model_function):
     """Function returning modified model.
@@ -143,7 +145,7 @@ def build_guided_model(build_model_function):
             return grad * tf.cast(grad > 0., dtype) * \
                    tf.cast(op.inputs[0] > 0., dtype)
 
-    g = tf.get_default_graph()
+    g = tf.compat.v1.get_default_graph()
     with g.gradient_override_map({'Relu': 'GuidedBackProp'}):
         new_model = build_model_function()
     return new_model
@@ -152,7 +154,8 @@ def GuidedBackPropagation(model, img_array, layer_name):
     model_input = model.input
     layer_output = model.get_layer(layer_name).output
     max_output = K.max(layer_output, axis=3)
-    get_output = K.function([model_input], [K.gradients(max_output, model_input)[0]])
+    grads = tf.gradients(max_output, model_input)[0]
+    get_output = K.function([model_input], [grads])
     saliency = get_output([img_array])
     saliency = np.clip(saliency[0][0], 0.0, 1.0)  # scale 0 to 1.0  
     return saliency
@@ -160,7 +163,7 @@ def GuidedBackPropagation(model, img_array, layer_name):
 def sigmoid(x, a, b, c):
     return c / (1 + np.exp(-a * (x-b)))
 
-from keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 def read_and_preprocess_img(path, size=(224,224)):
     img = load_img(path, target_size=size)
