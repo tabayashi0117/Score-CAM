@@ -1,0 +1,69 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository.
+
+## What this repository is
+
+A **readable reference implementation** of Score-CAM (and Faster-Score-CAM) in
+Keras, accompanying a [Qiita article](https://qiita.com/futakuchi0117/items/95c518254185ec5ea485).
+
+It is **not** a general-purpose saliency library. Maintained alternatives for that
+are `tf-keras-vis` and `pytorch-grad-cam`. Optimise this repo for *clarity and
+correctness*, not for feature coverage. When in doubt, prefer the simpler,
+more legible implementation.
+
+## Layout
+
+| Path | Role |
+|---|---|
+| `scorecam/` | The implementation. Single source of truth. |
+| `gradcamutils.py` | Backwards-compatible shim re-exporting `scorecam`. The article and older forks import this name — **do not delete or add logic here**. |
+| `tests/` | pytest suite. Runs on CPU with a tiny randomly-initialised model; no downloads, no ImageNet weights. |
+| `Score-CAM.ipynb` | Demo notebook. |
+| `image/`, `result/` | Inputs and rendered outputs used by the README. |
+
+## Non-negotiable rules
+
+1. **No algorithm logic in the notebook.** The notebook imports from `scorecam`
+   and displays results. If you find yourself pasting a function body into a
+   cell, put it in `scorecam/` and import it instead.
+2. **Notebook outputs are stripped on commit** (`nbstripout` via pre-commit).
+   Figures shown in the README live in `result/` as PNGs. Never commit a
+   notebook whose diff is megabytes of base64.
+3. **Eager only.** Never call `tf.compat.v1.disable_eager_execution()`. Never use
+   `tf.gradients`, `keras.backend.function`, or `tf.compat.v1.*`. Gradients come
+   from `tf.GradientTape`; custom gradients from `@tf.custom_gradient`.
+4. **No private APIs.** `tensorflow.python.*` and anything with a leading
+   underscore is off limits — that is what broke this repo for five years.
+5. **Every CAM function returns** a 2-D `float32` numpy array with the spatial
+   shape of the target layer, values scaled to `[0, 1]`, no NaN/Inf.
+   `tests/test_cam.py` enforces this; keep it that way.
+
+## Paper fidelity
+
+The default behaviour follows the [Score-CAM paper](https://arxiv.org/abs/1910.01279)
+(Algorithm 1), *not* the authors' PyTorch reference implementation, which
+diverges from their own paper in two places. Both behaviours are reachable via
+keyword arguments, and `scorecam/score_cam.py` documents the divergence inline.
+
+Do not "fix" these to match some other implementation without checking the paper
+first. If you change a default, regenerate `result/` and say so in the PR.
+
+## Environment
+
+Managed with `uv`. Python >= 3.10, TensorFlow >= 2.16 (i.e. Keras 3).
+
+```bash
+uv sync --group dev
+uv run pytest
+```
+
+The test suite must stay fast (seconds) and CPU-only so CI can run it on every
+push and on a monthly schedule against the newest TensorFlow release.
+
+## Working style
+
+- Branch + PR. Never commit to `master` directly.
+- One concern per PR. Do not mix a notebook re-render with an algorithm change.
+- If a change alters numerical output, regenerate the affected `result/*.png`
+  in the same PR and show a before/after in the PR description.
