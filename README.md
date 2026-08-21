@@ -179,6 +179,12 @@ For a general-purpose, actively maintained saliency library, prefer
 [`pytorch-grad-cam`](https://github.com/jacobgil/pytorch-grad-cam) (PyTorch).
 This repository is a reference implementation meant to be read.
 
+## Changelog
+
+See [`CHANGELOG.md`](./CHANGELOG.md). v0.2.0 fixes several correctness bugs that
+change Score-CAM's output; `gradcamutils` still imports, so existing code keeps
+working.
+
 ## License
 
 [MIT](./LICENSE)
