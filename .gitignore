@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+.python-version
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Datasets and trained weights (downloaded / generated, never committed)
+DAGM/
+*.h5
+*.keras
+*.zip
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
