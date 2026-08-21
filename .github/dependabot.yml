@@ -1,0 +1,20 @@
+# Dependency updates. The stale requirements.txt this repository used to carry
+# produced sixteen open pull requests over five years, none of which could be
+# merged; grouping keeps that from happening again.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]

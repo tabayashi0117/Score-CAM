@@ -22,6 +22,21 @@ def sigmoid(x, a, b, c):
     return c / (1 + np.exp(-a * (np.asarray(x, dtype=np.float64) - b)))
 
 
+def resize_2d(array, size_hw):
+    """Bilinear resize of a 2-D map, or an ``(H, W, C)`` image, to ``size_hw``.
+
+    ``tf.image.resize`` rather than ``cv2.resize``: TensorFlow is already a
+    dependency and the two agree to float32 rounding error, so OpenCV -- 120 MB
+    of wheel for four function calls -- is not worth carrying.
+    """
+    arr = np.asarray(array, dtype=np.float32)
+    flat = arr.ndim == 2
+    if flat:
+        arr = arr[..., None]
+    out = tf.image.resize(arr, tuple(size_hw), method="bilinear").numpy()
+    return out[..., 0] if flat else out
+
+
 def rescale(cam):
     """ReLU a raw CAM and scale it into [0, 1].
 

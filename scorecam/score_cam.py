@@ -69,17 +69,37 @@ from ._common import (
     logit_output,
     model_input_hw,
     rescale,
+    resize_2d,
     resolve_class,
     softmax,
 )
 
-__all__ = ["ScoreCam"]
+__all__ = ["ScoreCam", "masked_inputs"]
 
-def _resize(act_map, size_hw):
-    import cv2
 
-    height, width = size_hw
-    return cv2.resize(act_map, (width, height), interpolation=cv2.INTER_LINEAR)
+def upsample_and_normalise(act_maps, size_hw):
+    """``(h, w, n)`` activation maps -> ``(n, H, W)`` masks in ``[0, 1]``.
+
+    Steps 1 and 2 of the algorithm, vectorised over channels. A constant map
+    normalises to zero instead of dividing by a zero range.
+    """
+    # (h, w, n) is already the (H, W, C) layout tf.image.resize expects, so the
+    # spatial dims are the ones that get resized; move the channel axis after.
+    maps = np.transpose(resize_2d(act_maps, size_hw), (2, 0, 1))
+    lo = maps.min(axis=(1, 2), keepdims=True)
+    span = maps.max(axis=(1, 2), keepdims=True) - lo
+    # eq. 8: s(A) = (A - min) / (max - min)
+    return np.where(span > 0.0, (maps - lo) / np.where(span > 0.0, span, 1.0), 0.0)
+
+
+def masked_inputs(base_img, act_maps, size_hw, preprocess_fn=None):
+    """Step 3: project the masks onto the input by a Hadamard product.
+
+    Shared with :mod:`scorecam.diagnostics` so the two cannot drift apart.
+    """
+    masks = upsample_and_normalise(act_maps, size_hw)
+    batch = base_img[None] * masks[..., None]
+    return preprocess_fn(batch) if preprocess_fn is not None else batch
 
 
 def _select_channels(act_map_array, max_N):
@@ -152,25 +172,16 @@ def ScoreCam(
 
     input_hw = model_input_hw(model)
 
-    def masked_input(k):
-        # 1. upsample the activation map to the model's input size
-        act_map = _resize(act_map_array[0, :, :, k], input_hw)
-        # 2. normalise into [0, 1]  --  eq. 8, s(A) = (A - min) / (max - min)
-        lo, hi = float(np.min(act_map)), float(np.max(act_map))
-        if hi - lo != 0.0:
-            act_map = (act_map - lo) / (hi - lo)
-        else:
-            act_map = np.zeros_like(act_map)
-        # 3. project onto the input by a Hadamard product
-        masked = base[0] * act_map[..., None]
-        return preprocess_fn(masked.copy()) if mask_raw else masked
-
-    # 4. feed the masked inputs through the model, in batches, as logits
+    # 1-4. upsample, normalise, mask, and score, one batch of channels at a time
     with logit_output(model):
         logits = []
         for start in range(0, n_channels, batch_size):
-            batch = np.stack(
-                [masked_input(k) for k in range(start, min(start + batch_size, n_channels))]
+            end = min(start + batch_size, n_channels)
+            batch = masked_inputs(
+                base[0],
+                act_map_array[0, :, :, start:end],
+                input_hw,
+                preprocess_fn if mask_raw else None,
             )
             logits.append(np.asarray(call_model(model, batch), dtype=np.float32))
         logits = np.concatenate(logits, axis=0)

@@ -18,6 +18,13 @@ iteration in eager mode` on TensorFlow >= 2.16, because `gradcamutils.py` called
 - `read_and_preprocess_img` no longer hard-codes VGG16 preprocessing. It still
   defaults to it; pass `preprocess_fn=` for other models.
 - Removed `normalize()`, an unused L2 helper that only worked in graph mode.
+- **OpenCV is no longer a dependency.** `superimpose` now colours through
+  Matplotlib, which quantizes `jet` slightly differently from
+  `cv2.COLORMAP_JET` — overlays differ by a mean of 1.4/255. CAM values are
+  unaffected: `tf.image.resize` agrees with `cv2.resize` to 1.2e-07.
+  An array passed to `superimpose` is now interpreted as **RGB**; it was
+  previously assumed to be BGR, because the function read images with
+  `cv2.imread`. Paths are unaffected.
 - Score-CAM output changes: see the correctness fixes below.
 
 ### Correctness
@@ -53,13 +60,19 @@ iteration in eager mode` on TensorFlow >= 2.16, because `gradcamutils.py` called
   are under each mode.
 - `scorecam.plotting` and `scripts/regenerate_results.py`, so the committed
   figures and the notebook cannot drift apart.
+- `colormap=` on `superimpose`, which takes any Matplotlib colormap. `jet` stays
+  the default, but it is a poor colormap perceptually; `turbo` is the modern
+  drop-in.
 - A pytest suite (68 tests, CPU-only, no downloads, under a second) and CI that
   re-runs it against the newest TensorFlow on the 1st of each month.
 
 ### Changed
 
 - Score-CAM scores its masked inputs in batches; it previously built all of them
-  at once, 300 MB for VGG16's 512 channels.
+  at once, 300 MB for VGG16's 512 channels. Upsampling and normalising the
+  activation maps is now vectorised over a whole batch of channels instead of
+  looping one at a time, and `scorecam.diagnostics` shares that code rather than
+  reimplementing it.
 - Guided Backpropagation uses `tf.custom_gradient` instead of the private
   `ops._gradient_registry` and `gradient_override_map`. `build_guided_model`
   takes a model directly, though it still accepts the old factory callable.

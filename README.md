@@ -29,6 +29,10 @@ uv sync            # or: pip install -e .
 Python >= 3.11, TensorFlow >= 2.16 (Keras 3). For an NVIDIA GPU on Linux,
 `uv sync --extra gpu`, which pulls `tensorflow[and-cuda]`.
 
+The only dependencies are TensorFlow, NumPy, Pillow and Matplotlib. Resizing
+goes through `tf.image.resize`, image loading through Pillow, and colouring
+through Matplotlib — so there is no OpenCV to install.
+
 ## Usage
 
 ```python
@@ -41,6 +45,7 @@ img_array = read_and_preprocess_img("./image/hummingbird.jpg", size=(224, 224))
 cam = ScoreCam(model, img_array, "block5_conv3")               # Score-CAM
 cam = ScoreCam(model, img_array, "block5_conv3", max_N=10)     # Faster-Score-CAM
 overlay = superimpose("./image/hummingbird.jpg", cam)
+overlay = superimpose(path, cam, colormap="turbo")   # any Matplotlib colormap
 ```
 
 Every CAM function returns a 2-D `float32` array scaled into `[0, 1]`, with the
@@ -55,7 +60,13 @@ GradCamPlusPlus(model, img_array, layer_name, class_index=None, use_logits=True)
 ScoreCam(model, img_array, layer_name, max_N=-1, class_index=None, batch_size=32,
          weight_mode="reference", raw_img_array=None, preprocess_fn=None)
 GuidedBackPropagation(build_guided_model(model), img_array, layer_name)
+superimpose(path_or_rgb_array, cam, emphasize=False, heatmap_intensity=0.8,
+            colormap="jet")
 ```
+
+`superimpose` defaults to `jet` because that is what published CAM figures use,
+but it takes any Matplotlib colormap; `turbo` is the modern drop-in, and
+`inferno` or `viridis` are better still if you do not need the familiar look.
 
 For a model that is not VGG16, pass its own preprocessing:
 

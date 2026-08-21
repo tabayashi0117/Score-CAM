@@ -106,19 +106,13 @@ def test_reference_weights_are_class_probabilities_not_a_double_softmax(model, i
     authors' Torch code applies exactly one, to logits. Reproduce both and check
     we match the latter."""
     from scorecam._common import logit_output
-    from scorecam.score_cam import _resize
+    from scorecam.score_cam import masked_inputs
 
     layer = model.get_layer(LAYER_NAME)
     act = np.asarray(activation_model(model, LAYER_NAME)(img_array, training=False))
     cls = int(np.argmax(model(img_array, training=False).numpy()))
 
-    masks = []
-    for k in range(act.shape[3]):
-        m = _resize(act[0, :, :, k], (32, 32))
-        lo, hi = float(m.min()), float(m.max())
-        m = (m - lo) / (hi - lo) if hi > lo else np.zeros_like(m)
-        masks.append(np.asarray(img_array, dtype=np.float32)[0] * m[..., None])
-    masks = np.stack(masks)
+    masks = masked_inputs(np.asarray(img_array, dtype=np.float32)[0], act[0], (32, 32))
 
     with logit_output(model):
         logits = np.asarray(model(masks, training=False))

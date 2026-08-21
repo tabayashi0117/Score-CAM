@@ -38,7 +38,14 @@ more legible implementation.
    from `tf.GradientTape`; custom gradients from `@tf.custom_gradient`.
 4. **No private APIs.** `tensorflow.python.*` and anything with a leading
    underscore is off limits — that is what broke this repo for five years.
-5. **Every CAM function returns** a 2-D `float32` numpy array with the spatial
+5. **Do not add dependencies.** TensorFlow, NumPy, Pillow and Matplotlib cover
+   everything here. Resize with `tf.image.resize` (`scorecam._common.resize_2d`),
+   load images with `keras.utils.load_img`, colour with `matplotlib.colormaps`.
+   OpenCV was removed in v0.2: 120 MB of wheel for four function calls, all of
+   which the existing dependencies already did — `tf.image.resize` agrees with
+   `cv2.resize` to float32 rounding error. A test asserts `cv2` never gets
+   imported.
+6. **Every CAM function returns** a 2-D `float32` numpy array with the spatial
    shape of the target layer, values scaled to `[0, 1]`, no NaN/Inf.
    `tests/test_cam.py` enforces this; keep it that way.
 

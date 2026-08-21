@@ -6,6 +6,7 @@ committed figure can never drift from what the notebook shows.
 
 import numpy as np
 
+from ._common import resize_2d
 from .grad_cam import GradCam, GradCamPlusPlus
 from .guided import GuidedBackPropagation
 from .preprocess import read_img
@@ -46,12 +47,7 @@ def explain(model, img_path, layer_name, preprocess_fn, size=(224, 224), max_N=1
 
 
 def _guided(saliency, cam, shape_hw):
-    import cv2
-
-    height, width = shape_hw
-    saliency = cv2.resize(saliency, (width, height))
-    cam = cv2.resize(cam, (width, height))
-    return saliency * cam[..., np.newaxis]
+    return resize_2d(saliency, shape_hw) * resize_2d(cam, shape_hw)[..., np.newaxis]
 
 
 def comparison_figure(img_path, maps, rows=("overlay", "guided"), title=None,
@@ -63,7 +59,6 @@ def comparison_figure(img_path, maps, rows=("overlay", "guided"), title=None,
         ``"guided"``    Guided Backprop, and Guided-* for each method
         ``"raw"``       the CAM on its own
     """
-    import cv2
     import matplotlib.pyplot as plt
     from keras.utils import load_img
 
@@ -82,7 +77,7 @@ def comparison_figure(img_path, maps, rows=("overlay", "guided"), title=None,
             ]
         elif row == "guided":
             saliency = maps["saliency"]
-            panels = [(cv2.resize(saliency, shape_hw[::-1]), "Guided-BP")] + [
+            panels = [(resize_2d(saliency, shape_hw), "Guided-BP")] + [
                 # NOTE: the pre-v0.2 notebook multiplied the Guided-Faster-Score-CAM
                 # panel by score_cam, not faster_score_cam. It showed the wrong map.
                 (_guided(saliency, maps[m], shape_hw), f"Guided-{METHOD_LABELS[m]}")
