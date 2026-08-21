@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # This repository sat broken for years because TensorFlow moved and nothing
+    # noticed. Run the suite against the newest release on the 1st of each month.
+    - cron: "0 3 1 * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --group dev --frozen --python ${{ matrix.python-version }}
+      - run: uv run pytest -v
+
+  latest-tensorflow:
+    name: pytest (newest TensorFlow)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Resolve dependencies afresh, ignoring uv.lock
+        run: uv sync --group dev --upgrade
+      - run: uv pip list | grep -Ei "^(tensorflow|keras|numpy) "
+      - run: uv run pytest -v
+
+  notebook-is-stripped:
+    name: notebook has no committed outputs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Fail if Score-CAM.ipynb carries outputs
+        run: |
+          uv run --with nbstripout nbstripout --verify Score-CAM.ipynb \
+            || { echo "::error::Run 'uv run nbstripout --install' and re-commit."; exit 1; }
