@@ -12,7 +12,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 
-from ._common import activation_model, as_tensor
+from ._common import activation_model, as_tensor, call_model
 
 __all__ = ["build_guided_model", "GuidedBackPropagation"]
 
@@ -73,7 +73,7 @@ def GuidedBackPropagation(model, img_array, layer_name):
 
     with tf.GradientTape() as tape:
         tape.watch(x)
-        layer_output = act_model(x, training=False)
+        layer_output = call_model(act_model, x)
         max_output = tf.reduce_max(layer_output, axis=3)
 
     grads = tape.gradient(max_output, x)

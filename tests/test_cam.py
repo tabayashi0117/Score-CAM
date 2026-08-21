@@ -77,3 +77,26 @@ def test_linear_output_model_needs_no_softmax_stripping(build_model, img_array):
     linear_model = build_model(seed=1, activation="linear")
     cam = GradCam(linear_model, img_array, LAYER_NAME)
     assert np.isfinite(cam).all()
+
+
+@pytest.mark.parametrize("fn", CAMS, ids=lambda f: f.__name__)
+def test_list_input_models_are_called_correctly(fn, list_input_model, img_array):
+    """`Model([inputs], outputs)` expects a list. Calling it with a bare array
+    makes Keras warn and fall back -- and pytest is configured to turn that
+    UserWarning into an error, so this test fails loudly if a call is added
+    that bypasses call_model()."""
+    assert isinstance(list_input_model.input, list)
+
+    cam = call(fn, list_input_model, img_array)
+
+    assert cam.shape == SPATIAL
+    assert np.isfinite(cam).all()
+
+
+def test_guided_backprop_on_a_list_input_model(list_input_model, img_array):
+    from scorecam import GuidedBackPropagation, build_guided_model
+
+    saliency = GuidedBackPropagation(build_guided_model(list_input_model),
+                                     img_array, LAYER_NAME)
+    assert saliency.shape == img_array.shape[1:]
+    assert np.isfinite(saliency).all()

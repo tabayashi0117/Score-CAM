@@ -43,3 +43,22 @@ def img_array():
 @pytest.fixture
 def build_model():
     return _build
+
+
+@pytest.fixture(scope="module")
+def list_input_model():
+    """A model whose inputs were declared as a list of one.
+
+    `ResNet50(input_tensor=Input(...)).input` returns a list, so the natural
+    `Model(backbone.input, head)` in the DAGM example builds one of these. Keras
+    3 warns and falls back if such a model is called with a bare array.
+    """
+    keras.utils.set_random_seed(2)
+    inputs = keras.layers.Input(INPUT_SHAPE)
+    x = keras.layers.Conv2D(4, 3, activation="relu", padding="same", name="conv1")(inputs)
+    x = keras.layers.MaxPooling2D()(x)
+    x = keras.layers.Conv2D(N_FILTERS, 3, activation="relu", padding="same",
+                            name=LAYER_NAME)(x)
+    x = keras.layers.GlobalAveragePooling2D()(x)
+    outputs = keras.layers.Dense(N_CLASSES, activation="softmax", name="predictions")(x)
+    return keras.Model([inputs], outputs)

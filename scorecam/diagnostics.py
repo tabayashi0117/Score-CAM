@@ -14,6 +14,7 @@ import numpy as np
 
 from ._common import (
     activation_model,
+    call_model,
     logit_output,
     model_input_hw,
     resolve_class,
@@ -38,9 +39,9 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     mask_raw = raw_img_array is not None and preprocess_fn is not None
     base = np.asarray(raw_img_array if mask_raw else img_array, dtype=np.float32)
 
-    cls = resolve_class(model(img_array, training=False).numpy(), class_index)
+    cls = resolve_class(call_model(model, img_array).numpy(), class_index)
     act_model = activation_model(model, layer_name)
-    act = np.asarray(act_model(img_array, training=False), dtype=np.float32)
+    act = np.asarray(call_model(act_model, img_array), dtype=np.float32)
     input_hw = model_input_hw(model)
 
     masked = []
@@ -55,7 +56,7 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     def forward(as_logits):
         with logit_output(model, enabled=as_logits):
             return np.concatenate([
-                np.asarray(model(masked[i:i + batch_size], training=False), dtype=np.float32)
+                np.asarray(call_model(model, masked[i:i + batch_size]), dtype=np.float32)
                 for i in range(0, len(masked), batch_size)
             ])
 

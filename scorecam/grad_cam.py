@@ -7,7 +7,7 @@ Grad-CAM++: https://arxiv.org/abs/1710.11063
 import numpy as np
 import tensorflow as tf
 
-from ._common import as_tensor, logit_output, rescale, resolve_class, submodel
+from ._common import as_tensor, call_model, logit_output, rescale, resolve_class, submodel
 
 __all__ = ["GradCam", "GradCamPlusPlus"]
 
@@ -32,7 +32,7 @@ def GradCam(model, img_array, layer_name, class_index=None, use_logits=True):
 
     with logit_output(model, use_logits):
         with tf.GradientTape() as tape:
-            conv_output, preds = grad_model(x, training=False)
+            conv_output, preds = call_model(grad_model, x)
             cls = resolve_class(preds.numpy(), class_index)
             y_c = preds[:, cls]
         grads = tape.gradient(y_c, conv_output)
@@ -67,7 +67,7 @@ def GradCamPlusPlus(model, img_array, layer_name, class_index=None, use_logits=T
 
     with logit_output(model, use_logits):
         with tf.GradientTape() as tape:
-            conv_output, preds = grad_model(x, training=False)
+            conv_output, preds = call_model(grad_model, x)
             cls = resolve_class(preds.numpy(), class_index)
             y_c = preds[:, cls]
         grads = tape.gradient(y_c, conv_output)

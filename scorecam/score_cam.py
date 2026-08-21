@@ -65,6 +65,7 @@ import numpy as np
 
 from ._common import (
     activation_model,
+    call_model,
     logit_output,
     model_input_hw,
     rescale,
@@ -142,10 +143,10 @@ def ScoreCam(
     # Keras caches the tf.function that .predict() traces, so a model called
     # through it would keep its softmax even inside logit_output() -- which
     # silently made the weights depend on batch_size.
-    cls = resolve_class(model(img_array, training=False).numpy(), class_index)
+    cls = resolve_class(call_model(model, img_array).numpy(), class_index)
 
     act_model = activation_model(model, layer_name)
-    act_map_array = np.asarray(act_model(img_array, training=False), dtype=np.float32)
+    act_map_array = np.asarray(call_model(act_model, img_array), dtype=np.float32)
     act_map_array = _select_channels(act_map_array, max_N)
     n_channels = act_map_array.shape[3]
 
@@ -171,7 +172,7 @@ def ScoreCam(
             batch = np.stack(
                 [masked_input(k) for k in range(start, min(start + batch_size, n_channels))]
             )
-            logits.append(np.asarray(model(batch, training=False), dtype=np.float32))
+            logits.append(np.asarray(call_model(model, batch), dtype=np.float32))
         logits = np.concatenate(logits, axis=0)
 
     # 5. turn the target-class scores into channel weights
