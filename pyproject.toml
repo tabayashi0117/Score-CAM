@@ -37,4 +37,10 @@ packages = ["scorecam"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+    # Keras announces upcoming breakage as UserWarning ("The structure of
+    # `inputs` doesn't match ..."). Failing on it is how this repository finds
+    # out about the next Keras 3 change before its users do.
+    "error::UserWarning",
+    "ignore::DeprecationWarning",
+]
