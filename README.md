@@ -5,7 +5,7 @@
 ![](./image/sample_output.png)
 
 A readable Keras implementation of [Score-CAM](https://arxiv.org/abs/1910.01279),
-plus **Faster-Score-CAM**, a variant that is ~37x faster at a correlation of
+plus **Faster-Score-CAM**, a variant that is ~39x faster at a correlation of
 0.93 with the full method.
 
 The following are implemented and compared:
@@ -80,18 +80,18 @@ TensorFlow 2.21. Absolute times depend on the machine; the ratios do not.
 
 | method | time | speed-up | correlation with full Score-CAM |
 |---|---:|---:|---:|
-| Grad-CAM | 0.20 s | — | — |
+| Grad-CAM | 0.19 s | — | — |
 | Grad-CAM++ | 0.20 s | — | — |
-| Guided Backpropagation | 0.20 s | — | — |
-| **Score-CAM** | **18.4 s** | 1x | 1.000 |
-| Faster-Score-CAM `max_N=100` | 3.77 s | 5x | 0.995 |
-| Faster-Score-CAM `max_N=30` | 1.22 s | 15x | 0.981 |
-| **Faster-Score-CAM `max_N=10`** | **0.49 s** | **37x** | **0.932** |
-| Faster-Score-CAM `max_N=3` | 0.24 s | 76x | 0.621 |
-| Faster-Score-CAM `max_N=1` | 0.17 s | 108x | 0.538 |
+| Guided Backpropagation | 0.19 s | — | — |
+| **Score-CAM** | **20.4 s** | 1x | 1.000 |
+| Faster-Score-CAM `max_N=100` | 4.13 s | 5x | 0.999 |
+| Faster-Score-CAM `max_N=30` | 1.28 s | 16x | 0.986 |
+| **Faster-Score-CAM `max_N=10`** | **0.52 s** | **39x** | **0.927** |
+| Faster-Score-CAM `max_N=3` | 0.26 s | 78x | 0.567 |
+| Faster-Score-CAM `max_N=1` | 0.18 s | 114x | 0.461 |
 
-`max_N=10` is the sweet spot: 37x faster for a correlation of 0.93. Below it the
-map degrades quickly — `max_N=3` is already down to 0.62. Reproduce the table
+`max_N=10` is the sweet spot: 39x faster for a correlation of 0.93. Below it the
+map degrades quickly — `max_N=3` is already down to 0.57. Reproduce the table
 with the "processing time" cells of the notebook.
 
 ## The paper and the authors' code disagree
