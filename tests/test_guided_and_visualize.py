@@ -63,3 +63,47 @@ def test_shim_reexports_the_package():
 
     for name in gradcamutils.__all__:
         assert getattr(gradcamutils, name) is getattr(scorecam, name)
+
+
+@pytest.mark.parametrize("colormap", ["jet", "turbo", "inferno", "viridis"])
+def test_superimpose_accepts_any_matplotlib_colormap(colormap):
+    """Colouring goes through matplotlib now, so every colormap it ships works.
+    jet stays the default only because published CAM figures use it."""
+    cam = np.linspace(0.0, 1.0, 8 * 8).reshape(8, 8).astype("float32")
+    img = np.zeros((16, 16, 3), dtype="uint8")
+
+    out = superimpose(img, cam, colormap=colormap)
+
+    assert out.shape == img.shape and out.dtype == np.uint8
+
+
+def test_superimpose_rejects_a_non_rgb_array():
+    cam = np.zeros((4, 4), dtype="float32")
+    with pytest.raises(ValueError, match=r"\(H, W, 3\)"):
+        superimpose(np.zeros((16, 16), dtype="uint8"), cam)
+
+
+def test_superimpose_colours_the_hot_end_differently_from_the_cold_end():
+    """A sanity check that the colormap is actually applied, not just resized."""
+    img = np.zeros((4, 8, 3), dtype="uint8")
+    cam = np.concatenate([np.zeros((4, 4)), np.ones((4, 4))], axis=1).astype("float32")
+
+    out = superimpose(img, cam, heatmap_intensity=1.0)
+
+    assert not np.array_equal(out[:, 0], out[:, -1])
+
+
+def test_the_package_does_not_pull_in_opencv():
+    """OpenCV was 120 MB of wheel for four function calls: resize, imread,
+    applyColorMap and cvtColor. TensorFlow, Pillow and Matplotlib were already
+    dependencies and cover all four."""
+    import subprocess
+    import sys
+
+    code = (
+        "import scorecam, scorecam.plotting, scorecam.diagnostics, sys;"
+        "print('cv2' in sys.modules)"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "False", "something re-introduced an OpenCV import"

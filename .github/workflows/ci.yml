@@ -19,8 +19,8 @@ jobs:
       matrix:
         python-version: ["3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
       - run: uv sync --group dev --frozen --python ${{ matrix.python-version }}
@@ -30,8 +30,8 @@ jobs:
     name: pytest (newest TensorFlow)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
       - name: Resolve dependencies afresh, ignoring uv.lock
         run: uv sync --group dev --upgrade
       - run: uv pip list | grep -Ei "^(tensorflow|keras|numpy) "
@@ -41,8 +41,8 @@ jobs:
     name: notebook has no committed outputs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
       - name: Fail if Score-CAM.ipynb carries outputs
         run: |
           uv run --with nbstripout nbstripout --verify Score-CAM.ipynb \

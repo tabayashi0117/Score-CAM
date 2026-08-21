@@ -76,3 +76,21 @@ def test_logit_output_is_not_defeated_by_a_cached_predict_function(model, img_ar
         eager = model(img_array, training=False).numpy()
 
     assert not np.allclose(eager.sum(axis=1), 1.0, atol=1e-3)
+
+
+def test_resize_2d_handles_maps_and_images():
+    from scorecam._common import resize_2d
+
+    flat = resize_2d(np.arange(16.0).reshape(4, 4), (8, 8))
+    assert flat.shape == (8, 8) and flat.dtype == np.float32
+
+    image = resize_2d(np.zeros((4, 4, 3), dtype="float32"), (8, 6))
+    assert image.shape == (8, 6, 3)
+
+
+def test_resize_2d_is_bilinear_and_preserves_the_range():
+    from scorecam._common import resize_2d
+
+    up = resize_2d(np.array([[0.0, 1.0], [0.0, 1.0]], dtype="float32"), (2, 4))
+    assert up.min() >= 0.0 and up.max() <= 1.0
+    assert np.all(np.diff(up, axis=1) >= 0.0), "left-to-right ramp must stay monotonic"

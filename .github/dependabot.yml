@@ -1,0 +1,22 @@
+# Dependency updates. The stale requirements.txt this repository used to carry
+# produced sixteen open pull requests over five years, none of which could be
+# merged; grouping keeps that from happening again.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+
+  # setup-uv stopped publishing bare major tags after v7, so it has to be pinned
+  # to a full version. Dependabot is what keeps that pin from going stale.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]

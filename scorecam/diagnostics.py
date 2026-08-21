@@ -20,7 +20,7 @@ from ._common import (
     resolve_class,
     softmax,
 )
-from .score_cam import _resize
+from .score_cam import masked_inputs
 
 __all__ = ["weight_concentration"]
 
@@ -44,14 +44,8 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     act = np.asarray(call_model(act_model, img_array), dtype=np.float32)
     input_hw = model_input_hw(model)
 
-    masked = []
-    for k in range(act.shape[3]):
-        m = _resize(act[0, :, :, k], input_hw)
-        lo, hi = float(m.min()), float(m.max())
-        m = (m - lo) / (hi - lo) if hi > lo else np.zeros_like(m)
-        img = base[0] * m[..., None]
-        masked.append(preprocess_fn(img.copy()) if mask_raw else img)
-    masked = np.stack(masked)
+    masked = masked_inputs(base[0], act[0], input_hw,
+                           preprocess_fn if mask_raw else None)
 
     def forward(as_logits):
         with logit_output(model, enabled=as_logits):
