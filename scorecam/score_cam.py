@@ -11,7 +11,7 @@ including the ones in this repository's README -- was produced with. Opt into
 the literal paper behaviour explicitly; the second note below explains why it is
 not the default.
 
-1. ``mask_target`` -- what the upsampled mask multiplies.
+1. What the upsampled mask multiplies (``raw_img_array`` / ``preprocess_fn``).
    Algorithm 1 writes ``M_l^k <- s(Up(A_l^k)) o X_0``, the Hadamard product with
    the input *image*. The reference code multiplies the already-normalised
    tensor instead. The difference is the implied baseline: masking raw pixels
@@ -27,8 +27,14 @@ not the default.
        alpha_k^c = exp(S_k^c) / sum_k exp(S_k^c)
 
    The reference code instead takes the softmax over *classes* and reads off the
-   target-class probability. ``weight_mode="paper"`` implements the former,
-   ``"reference"`` the latter (and reproduces this repository's pre-v0.2 output).
+   target-class probability, i.e. ``alpha_k^c = P(c | M_k)``.
+   ``weight_mode="paper"`` implements the former, ``"reference"`` the latter.
+
+   Both modes are computed from logits. A Keras classifier usually *ends* in a
+   softmax, so the pre-v0.2 code -- which applied its own softmax on top of the
+   model's output -- was applying it twice, flattening the weights towards
+   uniform. Torch models emit logits, which is why the reference code gets this
+   right with a single softmax.
 
    Note that the baseline term ``f^c(X_b)`` is a constant with respect to ``k``
    and therefore cancels exactly inside the channel-wise softmax, so no baseline
@@ -38,16 +44,21 @@ not the default.
    Logits span a wide range, so exponentiating them concentrates almost all the
    mass on a couple of channels. Measured on VGG16 / ``block5_conv3`` with
    ``image/hummingbird.jpg``, where the target-class logits of the 512 masked
-   inputs run from -0.06 to 21.61::
+   inputs run from 1.29 to 20.54::
 
        weight_mode   largest weight   top-10 share   effective channels exp(H)
-       "paper"                67.7 %         99.4 %            2.5 of 512
-       "reference"             2.2 %         22.4 %           79.0 of 512
+       "paper"                82.9 %         96.4 %            2.5 of 512
+       "reference"             1.4 %         13.5 %          159.6 of 512
 
    In other words, Algorithm 1 read literally makes Score-CAM little more than
    "show the two or three best channels", which is presumably why the authors'
    own code does something else. Reproduce the numbers above with
-   ``python -m scorecam.diagnostics`` if you want to check this on your model.
+   ``python -m scorecam.diagnostics`` (add ``--paper-mask`` to measure under
+   raw-pixel masking instead; the conclusion is the same, 2.5 either way).
+
+   For reference, the pre-v0.2 double softmax landed at 487.3 effective
+   channels -- so close to a plain unweighted mean of the activation maps that
+   it was barely Score-CAM at all.
 """
 
 import numpy as np
@@ -63,14 +74,11 @@ from ._common import (
 
 __all__ = ["ScoreCam"]
 
-_INTER_LINEAR = 1  # cv2.INTER_LINEAR, without importing cv2 at module scope
-
-
 def _resize(act_map, size_hw):
     import cv2
 
     height, width = size_hw
-    return cv2.resize(act_map, (width, height), interpolation=_INTER_LINEAR)
+    return cv2.resize(act_map, (width, height), interpolation=cv2.INTER_LINEAR)
 
 
 def _select_channels(act_map_array, max_N):
@@ -156,23 +164,24 @@ def ScoreCam(
         masked = base[0] * act_map[..., None]
         return preprocess_fn(masked.copy()) if mask_raw else masked
 
-    # 4. feed the masked inputs through the model, in batches
-    with logit_output(model, enabled=(weight_mode == "paper")):
-        scores = []
+    # 4. feed the masked inputs through the model, in batches, as logits
+    with logit_output(model):
+        logits = []
         for start in range(0, n_channels, batch_size):
             batch = np.stack(
                 [masked_input(k) for k in range(start, min(start + batch_size, n_channels))]
             )
-            scores.append(np.asarray(model(batch, training=False), dtype=np.float32))
-        scores = np.concatenate(scores, axis=0)
+            logits.append(np.asarray(model(batch, training=False), dtype=np.float32))
+        logits = np.concatenate(logits, axis=0)
 
     # 5. turn the target-class scores into channel weights
     if weight_mode == "paper":
-        # softmax over the channel axis of the target-class logits. The baseline
-        # term f^c(X_b) is constant in k and cancels here.
-        weights = softmax(scores[:, cls], axis=0)
+        # softmax over the channel axis. The baseline term f^c(X_b) is constant
+        # in k and cancels here, so it needs no forward pass of its own.
+        weights = softmax(logits[:, cls], axis=0)
     else:
-        weights = softmax(scores, axis=1)[:, cls]
+        # softmax over the class axis: the target-class probability P(c | M_k).
+        weights = softmax(logits, axis=1)[:, cls]
 
     # 6. ReLU over the linear combination of activation maps
     return rescale(np.dot(act_map_array[0], weights))

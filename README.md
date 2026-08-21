@@ -110,19 +110,26 @@ arguments here, documented inline in
 read literally is close to degenerate: it exponentiates raw logits, which on a
 confident prediction concentrates nearly all the weight on a couple of channels.
 On VGG16 / `block5_conv3` / `hummingbird.jpg`, where the 512 masked inputs
-produce target-class logits spanning -0.06 to 21.61:
+produce target-class logits spanning 1.29 to 20.54:
 
 ```
 $ uv run python -m scorecam.diagnostics
 
 weight_mode    largest    top-10    exp(H)
-paper           67.7%     99.4%       2.5
-reference        2.2%     22.4%      79.0
+paper           82.9%     96.4%       2.5
+reference        1.4%     13.5%     159.6
 ```
 
 That is 2.5 effective channels out of 512 — Score-CAM reduces to "show the two
 or three best channels". Presumably why the authors' own code does something
 else. The two modes correlate at r=0.76.
+
+Note that both modes are computed from **logits**. A Keras classifier usually
+ends in a softmax, so the pre-v0.2 code — which applied its own softmax on top
+of the model's output — applied it twice and flattened the weights to 487 of 512
+effective channels, very nearly an unweighted mean of the activation maps. Torch
+models emit logits, which is why the reference code gets this right with one
+softmax.
 
 ## Results
 

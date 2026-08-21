@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from scorecam import ScoreCam
+from scorecam._common import activation_model, rescale, softmax
 from scorecam.preprocess import read_and_preprocess_img  # noqa: F401  (import smoke)
 from scorecam.score_cam import _select_channels
 
@@ -97,3 +98,37 @@ def test_weight_concentration_reports_both_modes(model, img_array):
         s = stats[mode]
         assert 0.0 < s["largest_weight"] <= 1.0
         assert 1.0 <= s["effective_channels"] <= N_FILTERS + 1e-6
+
+
+def test_reference_weights_are_class_probabilities_not_a_double_softmax(model, img_array):
+    """A Keras classifier ends in a softmax. The pre-v0.2 code applied its own
+    softmax on top of that output, flattening the weights towards uniform; the
+    authors' Torch code applies exactly one, to logits. Reproduce both and check
+    we match the latter."""
+    from scorecam._common import logit_output
+    from scorecam.score_cam import _resize
+
+    layer = model.get_layer(LAYER_NAME)
+    act = np.asarray(activation_model(model, LAYER_NAME)(img_array, training=False))
+    cls = int(np.argmax(model(img_array, training=False).numpy()))
+
+    masks = []
+    for k in range(act.shape[3]):
+        m = _resize(act[0, :, :, k], (32, 32))
+        lo, hi = float(m.min()), float(m.max())
+        m = (m - lo) / (hi - lo) if hi > lo else np.zeros_like(m)
+        masks.append(np.asarray(img_array, dtype=np.float32)[0] * m[..., None])
+    masks = np.stack(masks)
+
+    with logit_output(model):
+        logits = np.asarray(model(masks, training=False))
+    probs = np.asarray(model(masks, training=False))
+
+    single = softmax(logits, axis=1)[:, cls]     # what the reference code does
+    double = softmax(probs, axis=1)[:, cls]      # what pre-v0.2 did
+    assert not np.allclose(single, double)
+
+    expected = rescale(np.dot(act[0], single))
+    got = ScoreCam(model, img_array, LAYER_NAME, batch_size=4)
+    np.testing.assert_allclose(got, expected, atol=1e-5)
+    assert layer is model.get_layer(LAYER_NAME)
