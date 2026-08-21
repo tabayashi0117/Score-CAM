@@ -26,7 +26,7 @@ cd Score-CAM
 uv sync            # or: pip install -e .
 ```
 
-Python >= 3.10, TensorFlow >= 2.16 (Keras 3). For an NVIDIA GPU on Linux,
+Python >= 3.11, TensorFlow >= 2.16 (Keras 3). For an NVIDIA GPU on Linux,
 `uv sync --extra gpu`, which pulls `tensorflow[and-cuda]`.
 
 ## Usage

@@ -4,9 +4,13 @@ version = "0.2.0"
 description = "Keras 3 / tf.keras implementation of Grad-CAM, Grad-CAM++, Score-CAM and Faster-Score-CAM"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+# 3.11 is the floor because keras >= 3.14, which fixes GHSA-hqp4-2352-xf5r
+# (archive-extraction path traversal) and GHSA-4f3f-g24h-fr8m (untrusted
+# deserialization), is not published for 3.10. Python 3.10 is EOL anyway.
+requires-python = ">=3.11"
 dependencies = [
     "tensorflow>=2.16",
+    "keras>=3.14",  # see the requires-python note above
     "numpy>=1.24",
     "opencv-python>=4.8",
     "matplotlib>=3.7",
