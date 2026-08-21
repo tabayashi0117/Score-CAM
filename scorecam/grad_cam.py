@@ -76,9 +76,12 @@ def GradCamPlusPlus(model, img_array, layer_name, class_index=None, use_logits=T
     conv_output = conv_output[0].numpy()
     grads_val = grads[0].numpy()
 
-    # exp(S^c) is a positive constant that cancels in the alpha ratio below; we
-    # keep it only in the first-order term, and clip its exponent so that a
-    # large logit cannot overflow to inf.
+    # exp(S^c) is a positive constant. It cancels in the alpha ratio below, and
+    # in the first-order term it scales the whole map uniformly, which rescale()
+    # then normalises away -- so it cannot change the output. It is kept because
+    # the paper is written in terms of Y^c = exp(S^c) and dropping it would make
+    # the code harder to check against the equations. The exponent is clipped so
+    # a large logit cannot overflow to inf and poison the map with NaN.
     exp_score = float(np.exp(np.clip(score, -60.0, 60.0)))
     first = exp_score * grads_val
     second = exp_score * grads_val**2
