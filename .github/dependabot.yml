@@ -11,6 +11,8 @@ updates:
       python-dependencies:
         patterns: ["*"]
 
+  # setup-uv stopped publishing bare major tags after v7, so it has to be pinned
+  # to a full version. Dependabot is what keeps that pin from going stale.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
