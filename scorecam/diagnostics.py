@@ -10,10 +10,15 @@ that, so the claim in ``score_cam.py`` can be re-checked on any model::
 
 import argparse
 
-import keras
 import numpy as np
 
-from ._common import logit_output, model_input_hw, resolve_class, softmax
+from ._common import (
+    activation_model,
+    logit_output,
+    model_input_hw,
+    resolve_class,
+    softmax,
+)
 from .score_cam import _resize
 
 __all__ = ["weight_concentration"]
@@ -34,7 +39,7 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     base = np.asarray(raw_img_array if mask_raw else img_array, dtype=np.float32)
 
     cls = resolve_class(model(img_array, training=False).numpy(), class_index)
-    act_model = keras.Model(model.inputs, model.get_layer(layer_name).output)
+    act_model = activation_model(model, layer_name)
     act = np.asarray(act_model(img_array, training=False), dtype=np.float32)
     input_hw = model_input_hw(model)
 

@@ -12,8 +12,6 @@ from .conftest import LAYER_NAME, N_FILTERS
 
 SPATIAL = (16, 16)
 
-pytestmark = pytest.mark.filterwarnings("ignore::UserWarning")
-
 
 @pytest.mark.parametrize("max_N", [-1, 1, 3, N_FILTERS, N_FILTERS + 5])
 def test_max_N_never_changes_the_output_shape(model, img_array, max_N):
@@ -80,9 +78,13 @@ def test_masking_raw_pixels_runs_and_differs(model, img_array):
     assert not np.allclose(paper, reference_impl)
 
 
-def test_warns_when_masking_the_preprocessed_tensor(model, img_array):
-    with pytest.warns(UserWarning, match="Algorithm 1"):
-        ScoreCam(model, img_array, LAYER_NAME, batch_size=4)
+def test_default_weight_mode_is_the_reference_implementation(model, img_array):
+    """The published README figures were produced with the authors' released
+    behaviour; Algorithm 1 read literally is near-degenerate (see the module
+    docstring), so it stays opt-in."""
+    default = ScoreCam(model, img_array, LAYER_NAME, batch_size=4)
+    reference = ScoreCam(model, img_array, LAYER_NAME, weight_mode="reference", batch_size=4)
+    np.testing.assert_allclose(default, reference, atol=1e-6)
 
 
 def test_weight_concentration_reports_both_modes(model, img_array):

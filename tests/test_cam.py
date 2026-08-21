@@ -24,7 +24,6 @@ def call(fn, model, img_array, **kwargs):
 CAMS = [GradCam, GradCamPlusPlus, ScoreCam]
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 @pytest.mark.parametrize("fn", CAMS, ids=lambda f: f.__name__)
 def test_returns_2d_float32_in_unit_range(fn, model, img_array):
     cam = call(fn, model, img_array)
@@ -36,7 +35,6 @@ def test_returns_2d_float32_in_unit_range(fn, model, img_array):
     assert cam.min() >= 0.0 and cam.max() <= 1.0
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 @pytest.mark.parametrize("fn", CAMS, ids=lambda f: f.__name__)
 @pytest.mark.parametrize("class_index", range(N_CLASSES))
 def test_accepts_an_explicit_class(fn, model, img_array, class_index):
@@ -45,7 +43,6 @@ def test_accepts_an_explicit_class(fn, model, img_array, class_index):
     assert np.isfinite(cam).all()
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 @pytest.mark.parametrize("fn", CAMS, ids=lambda f: f.__name__)
 def test_flat_input_does_not_divide_by_zero(fn, model):
     """A zero image yields zero post-ReLU activations, hence a CAM whose max is
@@ -55,7 +52,6 @@ def test_flat_input_does_not_divide_by_zero(fn, model):
     assert np.isfinite(cam).all()
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 @pytest.mark.parametrize("fn", CAMS, ids=lambda f: f.__name__)
 def test_leaves_the_model_untouched(fn, model, img_array):
     """Stripping the final softmax must be reverted, whatever happens."""
@@ -68,7 +64,6 @@ def test_leaves_the_model_untouched(fn, model, img_array):
     np.testing.assert_allclose(model.predict(img_array, verbose=0), before_preds, atol=1e-6)
 
 
-@pytest.mark.filterwarnings("ignore::UserWarning")
 @pytest.mark.parametrize("fn", [GradCam, GradCamPlusPlus], ids=lambda f: f.__name__)
 def test_logits_and_probabilities_both_work(fn, model, img_array):
     for use_logits in (True, False):

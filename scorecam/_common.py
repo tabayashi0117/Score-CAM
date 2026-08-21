@@ -44,10 +44,29 @@ def resolve_class(preds, class_index):
     return int(class_index)
 
 
+def model_inputs(model):
+    """The model's input spec, unwrapped when there is exactly one.
+
+    ``model.inputs`` is always a list. Building a sub-model from it makes that
+    sub-model expect a list, so calling it with a bare array makes Keras 3 warn
+    ("The structure of `inputs` doesn't match the expected structure") and fall
+    back. Unwrapping keeps the sub-model's signature the same as the original's.
+    """
+    inputs = model.inputs
+    if isinstance(inputs, (list, tuple)) and len(inputs) == 1:
+        return inputs[0]
+    return inputs
+
+
 def submodel(model, layer_name):
     """A model returning ``(activations of layer_name, final output)``."""
     layer_output = model.get_layer(layer_name).output
-    return keras.Model(model.inputs, [layer_output, model.outputs[0]])
+    return keras.Model(model_inputs(model), [layer_output, model.outputs[0]])
+
+
+def activation_model(model, layer_name):
+    """A model returning just the activations of ``layer_name``."""
+    return keras.Model(model_inputs(model), model.get_layer(layer_name).output)
 
 
 def model_input_hw(model):

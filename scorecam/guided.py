@@ -12,7 +12,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 
-from ._common import as_tensor
+from ._common import activation_model, as_tensor
 
 __all__ = ["build_guided_model", "GuidedBackPropagation"]
 
@@ -68,7 +68,7 @@ def GuidedBackPropagation(model, img_array, layer_name):
     ``model`` should be the output of :func:`build_guided_model`; passing a plain
     model computes ordinary (non-guided) backpropagation.
     """
-    act_model = keras.Model(model.inputs, model.get_layer(layer_name).output)
+    act_model = activation_model(model, layer_name)
     x = as_tensor(img_array)
 
     with tf.GradientTape() as tape:

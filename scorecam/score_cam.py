@@ -5,7 +5,11 @@ Score-CAM: https://arxiv.org/abs/1910.01279
 Where the paper and the authors' reference implementation disagree
 -----------------------------------------------------------------
 The authors' PyTorch code diverges from their own Algorithm 1 in two places.
-Both are exposed here as keyword arguments; the defaults follow the *paper*.
+Both are exposed here as keyword arguments. **The defaults reproduce the
+reference implementation**, which is what every published Score-CAM figure --
+including the ones in this repository's README -- was produced with. Opt into
+the literal paper behaviour explicitly; the second note below explains why it is
+not the default.
 
 1. ``mask_target`` -- what the upsampled mask multiplies.
    Algorithm 1 writes ``M_l^k <- s(Up(A_l^k)) o X_0``, the Hadamard product with
@@ -46,12 +50,10 @@ Both are exposed here as keyword arguments; the defaults follow the *paper*.
    ``python -m scorecam.diagnostics`` if you want to check this on your model.
 """
 
-import warnings
-
-import keras
 import numpy as np
 
 from ._common import (
+    activation_model,
     logit_output,
     model_input_hw,
     rescale,
@@ -89,7 +91,7 @@ def ScoreCam(
     max_N=-1,
     class_index=None,
     batch_size=32,
-    weight_mode="paper",
+    weight_mode="reference",
     raw_img_array=None,
     preprocess_fn=None,
 ):
@@ -105,7 +107,8 @@ def ScoreCam(
         batch_size: masked inputs are scored in batches of this size. The
             previous implementation built and scored all of them at once, which
             for VGG16's 512 channels meant a single 300 MB array.
-        weight_mode: ``"paper"`` or ``"reference"`` -- see the module docstring.
+        weight_mode: ``"reference"`` (default, the authors' released code) or
+            ``"paper"`` (Algorithm 1 as written) -- see the module docstring.
         raw_img_array: the *un-preprocessed* image, same spatial size as
             ``img_array``. Supply it together with ``preprocess_fn`` to mask raw
             pixels as Algorithm 1 specifies.
@@ -124,15 +127,6 @@ def ScoreCam(
             "raw_img_array and preprocess_fn must be supplied together to mask "
             "raw pixels; pass neither to mask the preprocessed tensor instead."
         )
-    if not mask_raw:
-        warnings.warn(
-            "Score-CAM is masking the preprocessed tensor. Algorithm 1 of the "
-            "paper masks the raw image; pass raw_img_array= and preprocess_fn= "
-            "to do that.",
-            UserWarning,
-            stacklevel=2,
-        )
-
     img_array = np.asarray(img_array, dtype=np.float32)
     base = np.asarray(raw_img_array, dtype=np.float32) if mask_raw else img_array
 
@@ -142,7 +136,7 @@ def ScoreCam(
     # silently made the weights depend on batch_size.
     cls = resolve_class(model(img_array, training=False).numpy(), class_index)
 
-    act_model = keras.Model(model.inputs, model.get_layer(layer_name).output)
+    act_model = activation_model(model, layer_name)
     act_map_array = np.asarray(act_model(img_array, training=False), dtype=np.float32)
     act_map_array = _select_channels(act_map_array, max_N)
     n_channels = act_map_array.shape[3]
