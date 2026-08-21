@@ -7,7 +7,7 @@ Grad-CAM++: https://arxiv.org/abs/1710.11063
 import numpy as np
 import tensorflow as tf
 
-from ._common import as_tensor, logit_output, rescale, resolve_class, submodel
+from ._common import as_tensor, call_model, logit_output, rescale, resolve_class, submodel
 
 __all__ = ["GradCam", "GradCamPlusPlus"]
 
@@ -32,7 +32,7 @@ def GradCam(model, img_array, layer_name, class_index=None, use_logits=True):
 
     with logit_output(model, use_logits):
         with tf.GradientTape() as tape:
-            conv_output, preds = grad_model(x, training=False)
+            conv_output, preds = call_model(grad_model, x)
             cls = resolve_class(preds.numpy(), class_index)
             y_c = preds[:, cls]
         grads = tape.gradient(y_c, conv_output)
@@ -67,7 +67,7 @@ def GradCamPlusPlus(model, img_array, layer_name, class_index=None, use_logits=T
 
     with logit_output(model, use_logits):
         with tf.GradientTape() as tape:
-            conv_output, preds = grad_model(x, training=False)
+            conv_output, preds = call_model(grad_model, x)
             cls = resolve_class(preds.numpy(), class_index)
             y_c = preds[:, cls]
         grads = tape.gradient(y_c, conv_output)
@@ -76,9 +76,12 @@ def GradCamPlusPlus(model, img_array, layer_name, class_index=None, use_logits=T
     conv_output = conv_output[0].numpy()
     grads_val = grads[0].numpy()
 
-    # exp(S^c) is a positive constant that cancels in the alpha ratio below; we
-    # keep it only in the first-order term, and clip its exponent so that a
-    # large logit cannot overflow to inf.
+    # exp(S^c) is a positive constant. It cancels in the alpha ratio below, and
+    # in the first-order term it scales the whole map uniformly, which rescale()
+    # then normalises away -- so it cannot change the output. It is kept because
+    # the paper is written in terms of Y^c = exp(S^c) and dropping it would make
+    # the code harder to check against the equations. The exponent is clipped so
+    # a large logit cannot overflow to inf and poison the map with NaN.
     exp_score = float(np.exp(np.clip(score, -60.0, 60.0)))
     first = exp_score * grads_val
     second = exp_score * grads_val**2

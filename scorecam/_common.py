@@ -58,6 +58,23 @@ def model_inputs(model):
     return inputs
 
 
+def call_model(model, x, training=False):
+    """Call a model with a bare array, matching how its inputs are structured.
+
+    ``Model(inputs, outputs)`` remembers whether ``inputs`` was a tensor or a
+    list of one, and Keras 3 warns and falls back when a call does not match.
+    The two are easy to mix up: ``ResNet50(input_tensor=Input(...)).input``
+    returns a *list*, so the natural ``Model(backbone.input, head)`` produces a
+    list-structured model, while ``VGG16()`` and ``Sequential`` produce
+    tensor-structured ones. Callers should not have to know which they have.
+    """
+    try:
+        expects_list = isinstance(model.input, (list, tuple))
+    except (AttributeError, ValueError):
+        expects_list = False
+    return model([x] if expects_list else x, training=training)
+
+
 def submodel(model, layer_name):
     """A model returning ``(activations of layer_name, final output)``."""
     layer_output = model.get_layer(layer_name).output

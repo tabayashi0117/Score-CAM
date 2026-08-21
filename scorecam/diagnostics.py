@@ -14,6 +14,7 @@ import numpy as np
 
 from ._common import (
     activation_model,
+    call_model,
     logit_output,
     model_input_hw,
     resolve_class,
@@ -38,9 +39,9 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     mask_raw = raw_img_array is not None and preprocess_fn is not None
     base = np.asarray(raw_img_array if mask_raw else img_array, dtype=np.float32)
 
-    cls = resolve_class(model(img_array, training=False).numpy(), class_index)
+    cls = resolve_class(call_model(model, img_array).numpy(), class_index)
     act_model = activation_model(model, layer_name)
-    act = np.asarray(act_model(img_array, training=False), dtype=np.float32)
+    act = np.asarray(call_model(act_model, img_array), dtype=np.float32)
     input_hw = model_input_hw(model)
 
     masked = []
@@ -55,7 +56,7 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     def forward(as_logits):
         with logit_output(model, enabled=as_logits):
             return np.concatenate([
-                np.asarray(model(masked[i:i + batch_size], training=False), dtype=np.float32)
+                np.asarray(call_model(model, masked[i:i + batch_size]), dtype=np.float32)
                 for i in range(0, len(masked), batch_size)
             ])
 
@@ -63,8 +64,10 @@ def weight_concentration(model, img_array, layer_name, raw_img_array=None,
     probs = forward(False)
 
     modes = {
+        # Both are derived from logits: see the note in score_cam.py about the
+        # double softmax that a Keras model's own softmax output would cause.
         "paper": softmax(logits[:, cls], axis=0),
-        "reference": probs[:, cls] / max(float(probs[:, cls].sum()), 1e-12),
+        "reference": softmax(logits, axis=1)[:, cls],
     }
     stats = {
         "class_index": cls,
@@ -87,6 +90,11 @@ def _main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="./image/hummingbird.jpg")
     parser.add_argument("--layer", default="block5_conv3")
+    parser.add_argument(
+        "--paper-mask", action="store_true",
+        help="mask raw pixels as Algorithm 1 specifies, instead of the "
+             "preprocessed tensor that ScoreCam masks by default",
+    )
     args = parser.parse_args()
 
     from keras.applications.vgg16 import VGG16, preprocess_input
@@ -94,16 +102,17 @@ def _main():
     from .preprocess import read_and_preprocess_img, read_img
 
     model = VGG16(include_top=True, weights="imagenet")
+    paper_mask = (
+        dict(raw_img_array=read_img(args.image), preprocess_fn=preprocess_input)
+        if args.paper_mask else {}
+    )
     stats = weight_concentration(
-        model,
-        read_and_preprocess_img(args.image),
-        args.layer,
-        raw_img_array=read_img(args.image),
-        preprocess_fn=preprocess_input,
+        model, read_and_preprocess_img(args.image), args.layer, **paper_mask
     )
 
     print(f"{args.image}  layer={args.layer}  class={stats['class_index']}  "
-          f"channels={stats['n_channels']}")
+          f"channels={stats['n_channels']}  "
+          f"mask={'raw pixels' if args.paper_mask else 'preprocessed tensor'}")
     print(f"target-class logits: min={stats['logit_min']:.2f} "
           f"max={stats['logit_max']:.2f} std={stats['logit_std']:.2f}")
     print(f"{'weight_mode':<12}{'largest':>10}{'top-10':>10}{'exp(H)':>10}")
