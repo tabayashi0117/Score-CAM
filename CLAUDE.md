@@ -61,8 +61,8 @@ first. If you change a default, regenerate `result/` and say so in the PR.
 
 ## Environment
 
-Managed with `uv`. Python >= 3.11, TensorFlow >= 2.16 (i.e. Keras 3).
-The 3.11 floor is a security constraint, not a style choice: see the
+Managed with `uv`. Python >= 3.11.5, TensorFlow >= 2.16 (i.e. Keras 3).
+The 3.11.5 floor is a security constraint, not a style choice: see the
 comment in `pyproject.toml`. Do not lower it without checking those advisories.
 
 ```bash
