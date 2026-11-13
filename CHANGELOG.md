@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Python >= 3.11.5.** soupsieve >= 4.0 (pulled in by the Jupyter dev
+  dependencies), which fixes GHSA-mmhr-3c5m-f64f, GHSA-6655-6qjp-jx7x and
+  GHSA-7g44-g9rc-x53w, is not installable on 3.11.0–3.11.4.
+
 ## 0.2.0
 
 The first release that runs on a currently supported TensorFlow. Everything in

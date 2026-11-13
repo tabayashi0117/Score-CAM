@@ -7,7 +7,10 @@ license = { file = "LICENSE" }
 # 3.11 is the floor because keras >= 3.14, which fixes GHSA-hqp4-2352-xf5r
 # (archive-extraction path traversal) and GHSA-4f3f-g24h-fr8m (untrusted
 # deserialization), is not published for 3.10. Python 3.10 is EOL anyway.
-requires-python = ">=3.11"
+# The .5 is also a security floor: soupsieve >= 4.0 (dev dependency via
+# Jupyter), which fixes GHSA-mmhr-3c5m-f64f, GHSA-6655-6qjp-jx7x and
+# GHSA-7g44-g9rc-x53w, requires Python >= 3.11.5.
+requires-python = ">=3.11.5"
 dependencies = [
     "tensorflow>=2.16",
     "keras>=3.14",  # see the requires-python note above
